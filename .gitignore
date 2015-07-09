@@ -1,4 +1,4 @@
-./texpadtmp
+./texpadtmp/
 *.aux
 *.glo
 *.idx

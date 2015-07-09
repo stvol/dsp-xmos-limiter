@@ -70,8 +70,9 @@ sorting=ynt
 %%% Begin document
 \begin{document}
 \maketitle
+\newpage
 \section{Einleitung}
-Folgender Bericht ist Ergebnis einer Projektarbeit, welche im Sommersemester 2015 an der Jadehochschule Oldenburg im Modul \textit{Digitale Signalprozessoren} unter Leitung von Dr. Uwe Simmer entstand. Inhaltlich beschäftigte sich diese mit der Weiterentwicklung eines im vorhergehenden Semester begonnen, ähnlichen Projektes, welches die Implementierung eines Audio Lookahead Limiters auf einem DSP. Aus diesem Grund soll in diesem Bericht nicht nochmals auf die theoretischen Grundlagen eines Limiters sowie Besonderheiten der Programmierung von digitalen Signalprozessoren in Festkommaarithmetik eingegangen werden. Für Informationen dazu sei auf den etsprechenden Bericht verwiesen. \todo{ref zum alten Paper}
+Folgender Bericht ist Ergebnis einer Projektarbeit, welche im Sommersemester 2015 an der Jadehochschule Oldenburg im Modul \textit{Digitale Signalprozessoren} unter Leitung von Dr. Uwe Simmer entstand. Inhaltlich beschäftigte sich diese mit der Weiterentwicklung eines im vorhergehenden Semester begonnen, ähnlichen Projektes, welches die Implementierung eines Audio Lookahead Limiters auf einem DSP. Aus diesem Grund soll in diesem Bericht nicht nochmals auf die theoretischen Grundlagen eines Limiters sowie Besonderheiten der Programmierung von digitalen Signalprozessoren in Festkommaarithmetik eingegangen werden. Für Informationen dazu sei auf den entsprechenden Bericht verwiesen \cite{VS15}.
 
 
 \section{Projektvoraussetzungen}
@@ -79,7 +80,17 @@ Folgender Bericht ist Ergebnis einer Projektarbeit, welche im Sommersemester 201
 Dieser Abschnitt befasst sich mit Rahmenbedingungen und Voraussetzungen, welche vor Beginn des Projektes gegeben waren, wobei in Soft- und Hardwaregegebenheiten unterschieden werden soll.
 
 \subsection{Softwarevoraussetzungen}
-Als Codebasis stand die in einem vorangegangenen Projekt, ebenfalls von Volke in Zusammenarbeit mit Schreiber erarbeitete Implementierung eines Limiteralgorithmus zur Verfügung. Grundlage desselbigen ist die bei Internetrecherche gefundene Realisierungsidee eines nicht weiter identifizierbaren Christians, welche die Besonderheit aufweist, die notwendige Gainregelung komplett mittels FIR-Filter zu steuern. 
+Als Codebasis stand die in einem vorangegangenen Projekt, ebenfalls von Volke in Zusammenarbeit mit Schreiber erarbeitete Implementierung eines Limiteralgorithmus zur Verfügung \cite{CR00}. Grundlage desselbigen ist die bei Internetrecherche gefundene Realisierungsidee eines nicht weiter identifizierbaren Christians, welche die Besonderheit aufweist, die notwendige Gainregelung in der Attackphase komplett mittels FIR-Filter zu steuern. Das wiederum hat den großen Vorteil, dass der gewählte Schwellenwert wirklich punktgenau erreicht wird und das Ausgangssignal keinesfalls Samples enthält, welche diesen im Pegel überschreiten. Zur Veranschaulichung ist in Abbildung \ref{fig:old_limiter_bsb} der strukturelle Aufbau des Algorithmus dargestellt.
+
+\begin{figure}[hbt]
+  \centering
+  \label{fig:old_limiter_bsb}
+  \includegraphics[width=0.8\textwidth]{graphics/prosalim_ablauf}
+  \caption{Ablaufdiagramm des Lookahead Limiters vor der Erweiterung \cite{VS15}}
+\end{figure}
+
+
+Als frei wählbare Parameter stehen in der Implementierung von Volke und Schreiber der Threshold sowie die jeweiligen Zeiten für Attack- Hold- und Releasphase zur Verfügung. Die Umsetzung erfolge dabei so, dass der Limiter als \textit{loudness maximizer} arbeitet, also die Differenz zwischen Threshold und Vollaussteuerung automatisch mit dem limitierten Signal verrechnet, wodurch ein Ausgangssignal maximaler Lautstärke entsteht. 
 
 
 \subsection{Hardwarevoraussetzungen}
