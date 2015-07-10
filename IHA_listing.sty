@@ -1,0 +1,100 @@
+%----------------------------------------------------------------------%
+% Diese Datei beinhaltet einige Makros zum einbinden von Quellcodes
+% der Sprachen C++ und MATLAB.
+% Diese Makros sind zur verwendung mit dem IHA Diplomarbeits Template
+% gedacht und sehen bei anderen Dokument-Formatierungen (Seitenraender,
+% Schriftgroessen / -arten etc.) nicht besonders gut aus.
+% Weitere Probleme ergeben sich im Zusammenhang mit Sonderzeichen, die
+% z.T. einige seltsame Fehlermeldungen nachsichziehen koennen und eine
+% Compilierung des Dokuments verhindern. Daher sollten innerhalb der
+% Quellcodes besser ae, ue, oe und ss statt der Sonderzeichen verwendet
+% werden. Ferner sollte der Quellcode eine Zeilenlaenge von 80 Zeichen
+% NICHT ueberschreiten.
+%
+% Autor : Sven Fischer
+% Datum : 2004/Nov/21
+%----------------------------------------------------------------------%
+
+%----------------------------------------------------------------------%
+% Frab-Package laden, zum farbigen hervorheben der Schluesselwoerter.
+%----------------------------------------------------------------------%
+\usepackage{color}
+%----------------------------------------------------------------------%
+
+%----------------------------------------------------------------------%
+% Auflistungen von Quellcodes
+%----------------------------------------------------------------------%
+\usepackage{listings}
+
+% Cpp style
+\newcommand{\setupListingCpp}{%
+	\lstset{%
+		language          = C++,
+		tabsize           = 2,
+		numbers           = left,
+		numbersep         = 0pt:\ ,
+		showtabs          = false,
+		showspaces        = false,
+		showstringspaces  = false,
+		numberstyle       = \color[gray]{0.5}\ttfamily\footnotesize,
+		basicstyle        = \color[gray]{0.0}\ttfamily\footnotesize,
+		keywordstyle      = \color[rgb]{0.0, 0.0, 1.0},
+		commentstyle      = \color[rgb]{0.0, 0.5, 0.0},
+		identifierstyle   = {},
+		stringstyle       = {},
+		basewidth         = 0.5em,
+		xleftmargin       = 1.5cm,
+		xrightmargin      = 0.5cm,
+		framexleftmargin  = 1.0cm,
+		framexrightmargin = 0.0cm,
+		framextopmargin   = 0.2cm,
+		framexbottommargin= 0.2cm,
+		framesep          = 2pt,
+		rulesep           = 2pt,
+		backgroundcolor   = {},
+		fillcolor         = {},
+		rulecolor         = \color{black},
+		rulesepcolor      = \color{black},
+		frame             = none,
+		frameround        = ffff,
+		captionpos        = b,
+		otherkeywords	  = {int32_t}
+	}
+} % end of: \newcommand{\setupListingCpp}{
+
+% MALTLAB style
+\newcommand{\setupListingMatlab}{%
+	\lstset{%
+		language          = Matlab,
+		tabsize           = 2,
+		numbers           = left,
+		numbersep         = 0pt:\ ,
+		showtabs          = false,
+		showspaces        = false,
+		showstringspaces  = false,
+		numberstyle       = \color[gray]{0.5}\ttfamily\footnotesize,
+		basicstyle        = \color[gray]{0.0}\ttfamily\footnotesize,
+		keywordstyle      = \color[rgb]{0.0, 0.0, 1.0},
+		commentstyle      = \color[rgb]{0.0, 0.5, 0.0},
+		identifierstyle   = {},
+		stringstyle       = \color[rgb]{1.0, 0.0, 0.0},
+		basewidth         = 0.5em,
+		xleftmargin       = 1.5cm,
+		xrightmargin      = 0.5cm,
+		framexleftmargin  = 1.0cm,
+		framexrightmargin = 0.0cm,
+		framextopmargin   = 0.2cm,
+		framexbottommargin= 0.2cm,
+		framesep          = 2pt,
+		rulesep           = 2pt,
+		backgroundcolor   = {},
+		fillcolor         = {},
+		rulecolor         = \color{black},
+		rulesepcolor      = \color{black},
+		frame             = none,
+		frameround        = ffff,
+		captionpos        = b
+	}
+} % end of: \newcommand{\setupListingMatlab}{
+
+%----------------------------------------------------------------------%
