@@ -165,7 +165,7 @@ In den folgenden Abschnitten soll werden die Änderungen und Erweiterungen besch
 \subsection{Dynamisierung}
 Bevor mit der Erweiterung der Funktionalität begonnen wurde, stand die Modifizierung des bestehenden Codes von einer auf Funktionen und modulglobalen Variablen basierenden Implementierung hin zu einer Klassenarchitektur um den Limiter als Einheit aus Variablen und Funktionen besser zu kapseln. Codelisting \ref{lst:class}
 
-\begin{lstlisting}[language=C++, label=lst:class, caption={}]
+\begin{lstlisting}[language=C++, caption={Klassenstruktur der Limiterklasse},label=lst:class,]
 class Limiter
 {
  public:
@@ -201,13 +201,103 @@ Dieses statische Vorgehen funktioniert für viele Anwendungsfälle gut, birgt ab
 Um laute, kurze Signalanteile in einem ansonsten leisen Signal zu detektieren, bietet sich der sogenannte \textit{Crestfaktor}, welcher für eine gegeben Größe $X$ folgendermaßen definiert ist:
 
 \begin{equation}
-	k_s = \frac{|X|_{max}}{X_{eff}}
+\label{eq:crest}
+	X_{Crest} = \frac{|X|_{max}}{X_{eff}}
 \end{equation}
-Als das Verhältnis von Maximalwert und Effektivwert eines Zeitfensters bietet der Crestfaktor somit eine gute Möglichkeit die genannte Problematik zu quantifizieren. Ein hoher Wert signalisiert ein im Kontext betrachtet auffällig lautes Ereignis, während ein kleiner Wert für eine wenig sprunghafte Dynamik spricht.
+Als das Verhältnis von Maximalwert und Effektivwert eines Zeitfensters, bietet der Crestfaktor somit eine gute Möglichkeit die genannte Problematik zu quantifizieren. Ein hoher Wert signalisiert ein im Kontext betrachtet auffällig lautes Ereignis, während ein kleiner Wert für eine wenig sprunghafte Dynamik spricht.
 
 \subsubsection{Umsetzung}
+Die Anwendung des Crestfaktors als Parameter einer variablen Realeasezeit wurde in Anlehnung an ein Paper von Giannoulis, Massberg und Reiss realisiert.\cite{giannoulis2013parameter}
+Zur Berechnung werden zwei zusätzliche Detektoren implementiert, welche nach Gleichungen \ref{eq:peak} und \ref{eq:rms} den aktuellen Peak- bzw. RMS-Wert berechnen. 
+
+\begin{equation}
+\label{eq:peak}
+	y^2_{Peak}[n] = \text{max}(x^2[n], \alpha y^2_{Peak}[n-1]+(1-\alpha)x^2[n])
+\end{equation}
+\begin{equation}
+	y^2_{RMS}[n] = \alpha y^2_{RMS}[n-1] + (1-\alpha)x^2[n]
+\end{equation}
+Der notwendige Faktor $\alpha$ ist wie folgt definiert: $$\alpha = e^{\frac{-1}{\tau f_s}} \hspace{0.5cm} \text{mit} \hspace{0.5cm} \tau = 80~\text{ms}, f_s = \text{sampling rate}.$$
+Durch die Wahl des identischen $\alpha$ sowohl für Peak- als auch RMS-Detektor ist sicher gestellt, dass der Output des Peakdetektors niemals kleiner als der des RMS-Detektors ist.
+Der Crestfaktor würde sich nun nach Gleichung \ref{eq:crest} aus $$y_{Crest}[n] = \sqrt{\frac{y^2_{Peak}[n]}{y^2_{RMS}[n]}}$$ berechnen. Allerdings wird in Anlehnung an Gleichung (8) aus \cite{giannoulis2013parameter} die Zeitkonstante für die adaptive Releasezeit $\tau_R[n]$ folgendermaßen bestimmt
+\begin{equation}
+\label{eq:tauR}
+	\tau_R[n] = 2\tau_{R~\text{max}}/y^2_{Crest}[n] - \tau_{A},
+\end{equation}
+wobei $\tau_{R~\text{Max}}$ die maximale Releasezeit und $\tau_A$ die festgesetzte Attackzeit angeben.
+Um eine in fixed point Arithmetik \textit{teure} Division einzusparen wird die Bestimmung des notwendigen $\tau_R[n]$ unter Verwendung von Gleichungen \ref{eq:crest} und \ref{eq:tauR} folgendermaßen realisiert
+
+\begin{equation}
+	\tau_R[n] = 2\tau_{R~\text{max}} \cdot \frac{1}{y^2_{Crest}[n]},
+\end{equation} 
+was dazu führt, anstelle von Gleichung \ref{eq:crest} direkt dessen Kehrwert
+$$\frac{1}{y^2_{Crest}[n]} = \frac{y^2_{RMS}[n]}{y^2_{Peak}[n]}$$
+zu berechnen.
+
+Als letzten Schritt muss nun aus der nun adaptiven Zeitkonstante $\tau_R[n]$ der entsprechende Koeffizient für das IIR-Filter der Releasephase berechnet werden, was mittels folgender Berechnungsvorschrift geschieht:
+$$1-\alpha = \frac{1}{f_s*\tau_R[n]}$$
+
+In Listing \ref{lst:crest-code} sind die eben beschriebene mathematischen Zusammenhänge in der Codeimplementierung umgesetzt
+
+\begin{lstlisting}[language=C++, label=lst:crest-code, caption={Darstellung des für die Crestfaktorberechnug relevanten Codes}]
+// necessary variables
+alpha = float_to_fixed32(exp(-1/(0.2*fs)),31);
+
+// Peak detector
+x2n = max(abs(output_sample[0]), abs(output_sample[1]));
+x2n = ((int64_t)x2n*x2n) >> 31;
+Peak = max(x2n,(((int64_t)alpha*Peak) >> 31) + 
+	   (((int64_t)(0x7fffffff-alpha)*x2n) >> 31));
+	   
+// RMS detector
+Rms = (((int64_t)alpha*Rms) >> 31) + (((int64_t)(0x7fffffff-alpha)*x2n) >> 31);
+
+// calc inverted crest factor
+crest2Inv = udiv32(Rms,Peak);
+
+// calc time constant
+tauRel = tRelMax << 1; // 1s * 2 = 2s
+tauRel = (((int64_t) tauRel * crest2Inv) >> 16) - tAtt;
+
+// calc coefficents
+crest_bRel = udiv32(fixedFS, tauRel);
+crest_aRel = 0x7fffffff-crest_bRel;
+
+// Release mittels IIR Filter mit Crest
+if (crest_gain > crest_oldGain)
+{
+    temp64  = (int64_t) crest_aRel * crest_oldGain;
+    temp64 += (int64_t) crest_bRel * crest_gain;
+    crest_gain = min(crest_gain, (int32_t) (temp64 >> 31));
+}
+crest_oldGain = crest_gain;	
+\end{lstlisting}
+
+Um eine bessere Evaluation durchführen zu können wird zusätzlich auch jeweils der Gain mit fester Releasezeit berechnet und steht somit  als optionaler Rückgabewert zur Verfügung. 
 
 \section{Evaluation}
+
+Für eine umfangreiche Evaluation fehlte in Rahmen des Modules \textit{Digitale Signalprozessoren} die Zeit. Wünschenswert wäre insbesondere eine sich auf Hörtests stützende Bewertung des mittels adaptiver Releasephase erweiterten Limiteralgorithmus im Vergleich zur Standardvariante. Der subjektive Höreindruck der am Modul beteiligten Personen war der übereinstimmenden Meinung, dass besonders Signale mit großen Dynamiksprüngen tendenziell etwas lauter wahrgenommen werden. Diese Beobachtung erscheint logisch, da die Gainregelung in diesem Falle sehr schnell erfolgt und so fast immer der maximal mögliche Gain auftritt.
+
+Auf Grund der fehlenden subjektiven Bewertung soll an dieser Stelle ein kleiner objektiver Blick auf die Auswirkung des vorgestellten Algorithmus geworfen werden. Dazu wurden für verschiedene Signale (Drumset, Gitarre solo, Rockband) vergleichende Grafiken bezüglich des Gainverlaufes mit und ohne adaptiver Releasephase erstellt. Diese sind in den Abbildungen \ref{fig:drums}, \ref{fig:guitar} und \ref{fig:band} zu sehen.
+
+\begin{figure}[h!]
+  \centering
+  \label{fig:drums}
+  \includegraphics[width=0.9\textwidth]{graphics/drums_gains}
+  \caption{Aufgenommenes Schlagzeug.}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \label{fig:guitar}
+  \includegraphics[width=.9\textwidth]{graphics/guitar_gains}
+  \caption{Beispielhafte Verwendung des in \textit{xtimecomposer} integrierten Echtzeitvisualisierungstools \textit{xSCOPE}}
+\end{figure}
+
+Beide Abbildungen zeigen die Wirkungsweise des Algorithmus sehr gut. Während die rot dargestellte fixe Releasephase immer in gleicher Weise dem Vollaussteuerung entgegenstrebt, variiert das Verhalten der gelben, adaptierten Kurve. 
+
+ 
 
 \section{Fazit}
 
